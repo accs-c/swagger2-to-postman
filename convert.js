@@ -50,6 +50,9 @@ var uuidv4 = require('uuid/v4'),
                 if (!info || !info.title) {
                     return new ConvertResult('failed', 'Must contain info.title');
                 }
+                if (!info || !info.version) {
+                    return new ConvertResult('failed', 'Must contain info.version');
+                }
             }
 
             return new ConvertResult('passed', '');
@@ -57,26 +60,27 @@ var uuidv4 = require('uuid/v4'),
 
         setBasePath: function (json) {
             this.basePath = '';
-            if (json.host) {
-                this.basePath = json.host;
-            }
-            if (json.basePath) {
-                this.basePath += json.basePath;
-            }
+            // if (json.host) {
+            //     this.basePath = json.host;
+            // }
+            // if (json.basePath) {
+            //     this.basePath += json.basePath;
+            // }
 
-            if (json.schemes && json.schemes.indexOf('https') != -1) {
-                this.basePath = 'https://' + this.basePath;
-            }
-            else {
-                this.basePath = 'http://' + this.basePath;
-            }
+            // if (json.schemes && json.schemes.indexOf('https') != -1) {
+            //     this.basePath = 'https://' + this.basePath;
+            // }
+            // else {
+            //     this.basePath = 'http://' + this.basePath;
+            // }
+            this.basePath = '{{PROTOCOL}}://{{HOST}}:{{PORT}}' + json.basePath;
 
             if (!this.endsWith(this.basePath, '/')) {
                 this.basePath += '/';
             }
         },
 
-        getFolderNameForPath: function (pathUrl) {
+        getFolderNameForPath: function (pathUrl, tag) {
             if (pathUrl == '/') {
                 return null;
             }
@@ -86,8 +90,8 @@ var uuidv4 = require('uuid/v4'),
             this.logger('Getting folder name for path: ' + pathUrl);
             this.logger('Segments: ' + JSON.stringify(segments));
             if (numSegments > 1) {
-                folderName = segments[1];
-
+                // folderName = segments[1];
+                folderName = tag;
                 // create a folder for this path url
                 if (!this.folders[folderName]) {
                     this.folders[folderName] = this.createNewFolder(folderName);
@@ -116,7 +120,7 @@ var uuidv4 = require('uuid/v4'),
         },
 
         handleInfo: function (json) {
-            this.collectionJson.name = json.info.title;
+            this.collectionJson.name = json.info.title + " " + json.info.version;
             this.collectionJson.description = json.info.description;
         },
 
@@ -168,11 +172,11 @@ var uuidv4 = require('uuid/v4'),
             return retVal;
         },
 
-        addOperationToFolder: function (path, method, operation, folderName, params) {
+        addOperationToFolder: function (path, method, operation, folderName, params, json) {
             var root = this,
                 request = {
                     'id': uuidv4(),
-                    'headers': '',
+                    "headers": "Authorization: {{session_id}}\n",
                     'url': '',
                     'pathVariables': {},
                     'preRequestScript': '',
@@ -187,7 +191,20 @@ var uuidv4 = require('uuid/v4'),
                     'responses': [],
                     'tests': '',
                     'collectionId': root.collectionId,
-                    'synced': false
+                    'synced': false,
+                    "events": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "id": "0e03f953-57e4-48a8-b041-4f5980b9f651",
+                                "exec": [
+                                    "// テスト",
+                                    "tests[\"Successful request\"] = responseCode.code === 200;"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                 },
                 thisParams = this.getParamsForPathItem(params, operation.parameters),
                 hasQueryParams = false,
@@ -216,7 +233,13 @@ var uuidv4 = require('uuid/v4'),
                 .replace(/POSTMAN_VARIABLE_CLOSE_DB/gi, '}}');
 
             request.method = method;
-            request.name = operation.summary;
+
+            request.name = request.url.replace(this.basePath, "/");
+
+            summary_desc = operation.summary ? "[Summay] " + operation.summary : "";
+            summary_desc = summary_desc + (operation.description ? "\n [Desc] " + operation.description : "");
+            request.description = summary_desc;
+
             request.time = (new Date()).getTime();
 
             // Handle custom swagger attributes for postman aws integration
@@ -274,7 +297,15 @@ var uuidv4 = require('uuid/v4'),
 
                     else if (thisParams[param].in === 'body') {
                         request.dataMode = 'raw';
-                        request.rawModeData = thisParams[param].description;
+                   
+                        Properties = this.resolveRef(thisParams[param], json)
+                        schema = Object.assign({}, Properties.schema);
+
+                        schema = this.removeTypeKeyword(schema);
+                        
+                        model = JSON.stringify(schema);                                
+
+                        request.rawModeData = model                        
                     }
 
                     else if (thisParams[param].in === 'formData') {
@@ -313,7 +344,54 @@ var uuidv4 = require('uuid/v4'),
             }
         },
 
-        addPathItemToFolder: function (path, pathItem, folderName) {
+       removeTypeKeyword: function (Properties) {
+
+            _this = this;
+
+            for (var i in Properties) {
+
+                if(typeof Properties[i] == "object") {
+                    // オブジェクトだったらそのまま再帰処理
+                    objProperties = Object.assign({}, Properties[i]);
+                    Properties[i] = this.removeTypeKeyword(objProperties)
+
+                } else {
+                    if (Properties['type'] == "array") {
+                        // 配列だったら、中のitemsを再帰処理
+                        objItems = Object.assign({}, Properties['items']);
+                        return [this.removeTypeKeyword(objItems)]
+    
+                    } else {
+                        // オブジェクトでなければ、そのまま型名を返してtypeキー名を削除する
+                        return Properties['type']
+                    }
+                }
+            }
+            return Properties
+        },
+
+        // definitionsへの参照を経穴して、APIリクエストとして1つにまとめる
+        resolveRef: function(Properties, json){
+
+            _this = this;
+
+            Object.keys(Properties).forEach(function (key) {
+
+                if (Properties[key].hasOwnProperty('$ref')) {                   
+                    objectName = Properties[key].$ref.replace("#/definitions/", "");
+                    Properties[key] = Object.assign({}, json.definitions[objectName]["properties"]);
+                }
+    
+                if (typeof Properties[key] == "object") {
+                    _this.resolveRef(Properties[key], json)
+                }                
+
+            })
+
+            return Properties
+        },
+
+        addPathItemToFolder: function (path, pathItem, folderName, json) {
             if (pathItem.$ref) {
                 this.logger('Error - cannot handle $ref attributes');
                 return;
@@ -340,10 +418,31 @@ var uuidv4 = require('uuid/v4'),
                         verb.toUpperCase(),
                         pathItem[verb],
                         folderName,
-                        paramsForPathItem
+                        paramsForPathItem,
+                        json
                     );
                 }
             }
+        },
+
+        getTags: function(objPath) {
+
+            var tagName =""
+
+            // パスがどのHTTPメソッドをもっているかわからないので、foreachで探す
+            Object.keys(objPath).forEach(function (method) {
+                
+                if (objPath.hasOwnProperty(method)) {
+                    if (objPath[method].hasOwnProperty("tags")) {                        
+                        if (objPath[method]["tags"].hasOwnProperty(0)) {
+                             // 複数定義できるタグの中で一番最初のタグを返すことにする
+                            tagName = objPath[method]["tags"][0];
+                            return;
+                        }
+                    }
+                }
+            })
+            return tagName
         },
 
         handlePaths: function (json) {
@@ -353,10 +452,13 @@ var uuidv4 = require('uuid/v4'),
 
             // Add a folder for each path
             for (path in paths) {
+                objPath = paths[path];
+                tag = this.getTags(objPath);
+               
                 if (paths.hasOwnProperty(path)) {
-                    folderName = this.getFolderNameForPath(path);
+                    folderName = this.getFolderNameForPath(path, tag);
                     this.logger('Adding path item. path = ' + path + '   folder = ' + folderName);
-                    this.addPathItemToFolder(path, paths[path], folderName);
+                    this.addPathItemToFolder(path, paths[path], folderName, json);
                 }
             }
         },
