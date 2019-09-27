@@ -176,7 +176,7 @@ var uuidv4 = require('uuid/v4'),
             var root = this,
                 request = {
                     'id': uuidv4(),
-                    'headers': '',
+                    "headers": "Authorization: {{session_id}}\n",
                     'url': '',
                     'pathVariables': {},
                     'preRequestScript': '',
