@@ -297,7 +297,15 @@ var uuidv4 = require('uuid/v4'),
 
                     else if (thisParams[param].in === 'body') {
                         request.dataMode = 'raw';
-                        request.rawModeData = thisParams[param].description;
+                   
+                        Properties = this.resolveRef(thisParams[param], json)
+                        schema = Object.assign({}, Properties.schema);
+
+                        schema = this.removeTypeKeyword(schema);
+                        
+                        model = JSON.stringify(schema);                                
+
+                        request.rawModeData = model                        
                     }
 
                     else if (thisParams[param].in === 'formData') {
@@ -334,6 +342,53 @@ var uuidv4 = require('uuid/v4'),
             else {
                 this.collectionJson.order.push(request.id);
             }
+        },
+
+       removeTypeKeyword: function (Properties) {
+
+            _this = this;
+
+            for (var i in Properties) {
+
+                if(typeof Properties[i] == "object") {
+                    // オブジェクトだったらそのまま再帰処理
+                    objProperties = Object.assign({}, Properties[i]);
+                    Properties[i] = this.removeTypeKeyword(objProperties)
+
+                } else {
+                    if (Properties['type'] == "array") {
+                        // 配列だったら、中のitemsを再帰処理
+                        objItems = Object.assign({}, Properties['items']);
+                        return [this.removeTypeKeyword(objItems)]
+    
+                    } else {
+                        // オブジェクトでなければ、そのまま型名を返してtypeキー名を削除する
+                        return Properties['type']
+                    }
+                }
+            }
+            return Properties
+        },
+
+        // definitionsへの参照を経穴して、APIリクエストとして1つにまとめる
+        resolveRef: function(Properties, json){
+
+            _this = this;
+
+            Object.keys(Properties).forEach(function (key) {
+
+                if (Properties[key].hasOwnProperty('$ref')) {                   
+                    objectName = Properties[key].$ref.replace("#/definitions/", "");
+                    Properties[key] = Object.assign({}, json.definitions[objectName]["properties"]);
+                }
+    
+                if (typeof Properties[key] == "object") {
+                    _this.resolveRef(Properties[key], json)
+                }                
+
+            })
+
+            return Properties
         },
 
         addPathItemToFolder: function (path, pathItem, folderName, json) {
