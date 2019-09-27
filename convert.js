@@ -233,7 +233,8 @@ var uuidv4 = require('uuid/v4'),
                 .replace(/POSTMAN_VARIABLE_CLOSE_DB/gi, '}}');
 
             request.method = method;
-            request.name = operation.summary;
+
+            request.name = request.url.replace(this.basePath, "/");
             request.time = (new Date()).getTime();
 
             // Handle custom swagger attributes for postman aws integration
