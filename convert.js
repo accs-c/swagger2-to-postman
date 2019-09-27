@@ -60,19 +60,20 @@ var uuidv4 = require('uuid/v4'),
 
         setBasePath: function (json) {
             this.basePath = '';
-            if (json.host) {
-                this.basePath = json.host;
-            }
-            if (json.basePath) {
-                this.basePath += json.basePath;
-            }
+            // if (json.host) {
+            //     this.basePath = json.host;
+            // }
+            // if (json.basePath) {
+            //     this.basePath += json.basePath;
+            // }
 
-            if (json.schemes && json.schemes.indexOf('https') != -1) {
-                this.basePath = 'https://' + this.basePath;
-            }
-            else {
-                this.basePath = 'http://' + this.basePath;
-            }
+            // if (json.schemes && json.schemes.indexOf('https') != -1) {
+            //     this.basePath = 'https://' + this.basePath;
+            // }
+            // else {
+            //     this.basePath = 'http://' + this.basePath;
+            // }
+            this.basePath = '{{PROTOCOL}}://{{HOST}}:{{PORT}}' + json.basePath;
 
             if (!this.endsWith(this.basePath, '/')) {
                 this.basePath += '/';
