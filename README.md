@@ -1,3 +1,10 @@
+# 使い方 for ACCS
+
+1. cloneする
+2. npm installする
+3. ./cli.js -i ./swagger.json > postman.json
+
+
 # Swagger 2 to Postman converter
 Converter for swagger 2.0 JSON to Postman Collection v1
 
