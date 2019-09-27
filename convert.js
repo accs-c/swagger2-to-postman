@@ -191,7 +191,20 @@ var uuidv4 = require('uuid/v4'),
                     'responses': [],
                     'tests': '',
                     'collectionId': root.collectionId,
-                    'synced': false
+                    'synced': false,
+                    "events": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "id": "0e03f953-57e4-48a8-b041-4f5980b9f651",
+                                "exec": [
+                                    "// テスト",
+                                    "tests[\"Successful request\"] = responseCode.code === 200;"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
                 },
                 thisParams = this.getParamsForPathItem(params, operation.parameters),
                 hasQueryParams = false,
