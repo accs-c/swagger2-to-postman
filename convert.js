@@ -50,6 +50,9 @@ var uuidv4 = require('uuid/v4'),
                 if (!info || !info.title) {
                     return new ConvertResult('failed', 'Must contain info.title');
                 }
+                if (!info || !info.version) {
+                    return new ConvertResult('failed', 'Must contain info.version');
+                }
             }
 
             return new ConvertResult('passed', '');
@@ -116,7 +119,7 @@ var uuidv4 = require('uuid/v4'),
         },
 
         handleInfo: function (json) {
-            this.collectionJson.name = json.info.title;
+            this.collectionJson.name = json.info.title + " " + json.info.version;
             this.collectionJson.description = json.info.description;
         },
 
