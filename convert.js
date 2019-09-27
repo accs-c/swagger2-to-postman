@@ -235,6 +235,11 @@ var uuidv4 = require('uuid/v4'),
             request.method = method;
 
             request.name = request.url.replace(this.basePath, "/");
+
+            summary_desc = operation.summary ? "[Summay] " + operation.summary : "";
+            summary_desc = summary_desc + (operation.description ? "\n [Desc] " + operation.description : "");
+            request.description = summary_desc;
+
             request.time = (new Date()).getTime();
 
             // Handle custom swagger attributes for postman aws integration
