@@ -1,0 +1,55 @@
+{
+	"POST_/login": {
+		"exec": [
+			"// テスト",
+			"tests[\"Successful request\"] = responseCode.code === 200;",
+			"",
+			"// 環境変数に格納",
+			"pm.environment.set(\"session_id\", pm.response.json().session_id);",
+			"pm.environment.set(\"user_id\", pm.response.json().user_id);",
+			""
+		]
+	},
+	"POST_/courses": {
+		"exec": [
+			"// テスト",
+			"tests[\"Successful request\"] = responseCode.code === 200;",
+			"",
+			"// 環境変数に格納",
+			"pm.environment.set(\"course_id\", pm.response.json().course_id);"
+		]
+	},
+	"POST_/departments": {
+		"exec": [
+			"// テスト",
+			"tests[\"Successful request\"] = responseCode.code === 200;",
+			"",
+			"// 環境変数に格納",
+			"pm.environment.set(\"department_id\", pm.response.json().id);"
+		]
+	},
+	"POST_/chiebukuro/posts": {
+		"exec": [
+			"// テスト",
+			"tests[\"Successful request\"] = responseCode.code === 200;",
+			"",
+			"// 環境変数に格納",
+			"pm.environment.set(\"post_id\", pm.response.json().post_id);"
+		]
+	},
+	"GET_/me": {
+		"exec": [
+			"// 環境変数に格納",
+			"pm.environment.set(\"company_id\", pm.response.json().companies[0].company_id);"
+		]
+	},
+	"GET_/courses": {
+		"exec": [
+			"// テスト",
+			"tests[\"Successful request\"] = responseCode.code === 200;",
+			"",
+			"// 環境変数に格納",
+			"pm.environment.set(\"course_id\", pm.response.json()[0].course_id);"
+		]
+	}
+}

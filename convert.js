@@ -172,10 +172,10 @@ var uuidv4 = require('uuid/v4'),
             return retVal;
         },
 
-        addOperationToFolder: function (path, method, operation, folderName, params, json) {
+        addOperationToFolder: function (path, method, operation, folderName, params, json, testsJson) {
 
             headers = typeof operation.security == "undefined" ? "Authorization: {{session_id}}\n" : ""; 
-
+           
             var root = this,
                 request = {
                     'id': uuidv4(),
@@ -238,6 +238,11 @@ var uuidv4 = require('uuid/v4'),
             request.method = method;
 
             request.name = request.url.replace(this.basePath, "/");
+
+            // 別途定義しているテストなどがあったら上書きする
+            if( testsJson.hasOwnProperty(request.method + "_" + request.name)){
+                request.events[0].script.exec = testsJson[request.method + "_" + request.name].exec
+            }
 
             summary_desc = operation.summary ? "[Summay] " + operation.summary : "";
             summary_desc = summary_desc + (operation.description ? "\n [Desc] " + operation.description : "");
@@ -394,7 +399,7 @@ var uuidv4 = require('uuid/v4'),
             return Properties
         },
 
-        addPathItemToFolder: function (path, pathItem, folderName, json) {
+        addPathItemToFolder: function (path, pathItem, folderName, json, testsJson) {
             if (pathItem.$ref) {
                 this.logger('Error - cannot handle $ref attributes');
                 return;
@@ -422,7 +427,8 @@ var uuidv4 = require('uuid/v4'),
                         pathItem[verb],
                         folderName,
                         paramsForPathItem,
-                        json
+                        json,
+                        testsJson
                     );
                 }
             }
@@ -448,7 +454,7 @@ var uuidv4 = require('uuid/v4'),
             return tagName
         },
 
-        handlePaths: function (json) {
+        handlePaths: function (json, testsJson) {
             var paths = json.paths,
                 path,
                 folderName;
@@ -461,7 +467,7 @@ var uuidv4 = require('uuid/v4'),
                 if (paths.hasOwnProperty(path)) {
                     folderName = this.getFolderNameForPath(path, tag);
                     this.logger('Adding path item. path = ' + path + '   folder = ' + folderName);
-                    this.addPathItemToFolder(path, paths[path], folderName, json);
+                    this.addPathItemToFolder(path, paths[path], folderName, json, testsJson);
                 }
             }
         },
@@ -490,7 +496,8 @@ var uuidv4 = require('uuid/v4'),
             }
         },
 
-        convert: function (json) {
+        convert: function (json, testsJson) {
+
             var validationResult = this.validate(json);
             if (validationResult.status === 'failed') {
                 // error
@@ -509,7 +516,7 @@ var uuidv4 = require('uuid/v4'),
 
             this.setBasePath(json);
 
-            this.handlePaths(json);
+            this.handlePaths(json, testsJson);
 
             this.addFoldersToCollection();
 
