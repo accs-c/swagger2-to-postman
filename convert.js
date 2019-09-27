@@ -173,10 +173,13 @@ var uuidv4 = require('uuid/v4'),
         },
 
         addOperationToFolder: function (path, method, operation, folderName, params, json) {
+
+            headers = typeof operation.security == "undefined" ? "Authorization: {{session_id}}\n" : ""; 
+
             var root = this,
                 request = {
                     'id': uuidv4(),
-                    "headers": "Authorization: {{session_id}}\n",
+                    "headers": headers,
                     'url': '',
                     'pathVariables': {},
                     'preRequestScript': '',
